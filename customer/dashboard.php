@@ -237,7 +237,7 @@ $categories = $conn->query("SELECT DISTINCT category FROM products WHERE status 
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="profile.php"><i class="fas fa-user me-2"></i> My Profile</a></li>
                         <li><a class="dropdown-item" href="cart.php"><i class="fas fa-shopping-cart me-2"></i> My Cart</a></li>
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-history me-2"></i> Order History</a></li>
+                        <li><a class="dropdown-item" href="order_confirmation.php"><i class="fas fa-history me-2"></i> Order History</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item text-danger" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
                     </ul>

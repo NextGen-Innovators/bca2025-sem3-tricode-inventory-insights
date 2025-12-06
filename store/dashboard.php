@@ -45,8 +45,8 @@ $total_products = $conn->query("SELECT COUNT(*) as total FROM products WHERE sto
                     <a href="products.php">📦 Products</a>
                     <a href="add_product.php">➕ Add Product</a>
                     <a href="alerts.php">⚠️ Alerts</a>
+                    <a href="get_orders.php">📌Get Order</a>
                     <a href="../logout.php">🚪 Logout</a>
-                   
 
                 </div>
             </div>
@@ -112,6 +112,12 @@ $total_products = $conn->query("SELECT COUNT(*) as total FROM products WHERE sto
                             <div class="col-md-4 mb-3">
                                 <a href="alerts.php" class="btn btn-danger w-100">
                                     ⚠️ Check Alerts
+                                </a>
+
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <a href="get_orders.php" class="btn btn-danger w-100">
+                                    📌 Get Orders
                                 </a>
 
                             </div>

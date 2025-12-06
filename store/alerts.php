@@ -411,6 +411,7 @@ $resolved_count = $conn->query("
                     <a href="products.php">📦 Products</a>
                     <a href="add_product.php">➕ Add Product</a>
                     <a href="alerts.php" style="background: rgba(255,255,255,0.2);">⚠️ Alerts</a>
+                      <a href="get_orders.php">📌Get Order</a>
                     <a href="../logout.php">🚪 Logout</a>
                 </div>
             </div>

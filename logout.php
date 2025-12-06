@@ -65,7 +65,7 @@ if (isset($_COOKIE[session_name()])) {
 
     <script>
         // Show alert and redirect
-        alert('✅ You have been logged out successfully!\n\nThank you for using WasteWise.');
+        alert('You have been logged out successfully!\n\nThank you for using WasteWise.');
         
         // Redirect to index.php after 2 seconds
         setTimeout(function() {

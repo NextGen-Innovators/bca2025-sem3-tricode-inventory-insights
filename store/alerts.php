@@ -5,6 +5,22 @@ checkLogin();
 
 $store_id = $_SESSION['store_id'];
 
+// Function to calculate days left
+function getDaysLeft($expiry_date) {
+    if(!$expiry_date) return null;
+    
+    $today = new DateTime();
+    $expiry = new DateTime($expiry_date);
+    $interval = $today->diff($expiry);
+    
+    // If expiry is in the past, return 0
+    if($today > $expiry) {
+        return 0;
+    }
+    
+    return $interval->days;
+}
+
 // Handle actions first
 $action = $_GET['action'] ?? '';
 
@@ -13,51 +29,123 @@ switch($action) {
         $product_id = intval($_GET['product_id']);
         $percent = intval($_GET['percent']);
         
-        // Calculate discount price
-        $product_query = $conn->query("SELECT selling_price FROM products WHERE id = $product_id AND store_id = $store_id");
+        // Get product info with expiry date
+        $product_query = $conn->query("SELECT selling_price, expiry_date FROM products WHERE id = $product_id AND store_id = $store_id");
         if($product_query->num_rows > 0) {
             $product = $product_query->fetch_assoc();
             $discount_price = $product['selling_price'] * (100 - $percent) / 100;
+            
+            // Calculate CURRENT days left
+            $current_days_left = getDaysLeft($product['expiry_date']);
             
             $update_stmt = $conn->prepare("UPDATE products SET discount_price = ? WHERE id = ? AND store_id = ?");
             $update_stmt->bind_param("dii", $discount_price, $product_id, $store_id);
             $update_stmt->execute();
             
-            // Mark ALL alerts for this product as resolved
-            $conn->query("UPDATE waste_alerts SET is_resolved = TRUE WHERE product_id = $product_id");
+            // Update ALL alerts for this product with current days
+            $update_alert_stmt = $conn->prepare("
+                UPDATE waste_alerts 
+                SET is_resolved = TRUE, 
+                    days_remaining = ?,
+                    resolved_at = NOW()
+                WHERE product_id = ? AND is_resolved = FALSE
+            ");
+            $update_alert_stmt->bind_param("ii", $current_days_left, $product_id);
+            $update_alert_stmt->execute();
             
             // If stock is 0 after discount, delete product
             $conn->query("DELETE FROM products WHERE id = $product_id AND current_stock = 0");
             
-            header("Location: alerts.php?message=Discount applied successfully!");
+            header("Location: alerts.php?message=Discount applied successfully! (Days left: " . ($current_days_left ?? 'N/A') . ")");
             exit();
         }
         break;
         
     case 'mark_donation':
         $product_id = intval($_GET['product_id']);
-        $conn->query("UPDATE waste_alerts SET is_resolved = TRUE, suggested_action = 'donated' WHERE product_id = $product_id");
         
-        // Remove product after donation (assuming all stock donated)
+        // Get expiry date before deleting
+        $product_info = $conn->query("SELECT expiry_date FROM products WHERE id = $product_id")->fetch_assoc();
+        $current_days_left = getDaysLeft($product_info['expiry_date']);
+        
+        // Update alert with current days
+        $update_alert = $conn->prepare("
+            UPDATE waste_alerts 
+            SET is_resolved = TRUE, 
+                suggested_action = 'donated',
+                days_remaining = ?,
+                resolved_at = NOW()
+            WHERE product_id = ?
+        ");
+        $update_alert->bind_param("ii", $current_days_left, $product_id);
+        $update_alert->execute();
+        
+        // Remove product after donation
         $conn->query("DELETE FROM products WHERE id = $product_id");
         
-        header("Location: alerts.php?message=Marked as donated! Product removed.");
+        header("Location: alerts.php?message=Marked as donated! Product removed. (Was expiring in: " . ($current_days_left ?? 'N/A') . " days)");
         exit();
         break;
         
     case 'resolve':
         $alert_id = intval($_GET['id']);
-        $conn->query("UPDATE waste_alerts SET is_resolved = TRUE WHERE id = $alert_id");
+        
+        // Get product info first
+        $alert_info = $conn->query("
+            SELECT wa.product_id, p.expiry_date 
+            FROM waste_alerts wa
+            JOIN products p ON wa.product_id = p.id
+            WHERE wa.id = $alert_id
+        ")->fetch_assoc();
+        
+        // Calculate current days
+        $current_days_left = getDaysLeft($alert_info['expiry_date']);
+        
+        // Update with current days
+        $update_alert = $conn->prepare("
+            UPDATE waste_alerts 
+            SET is_resolved = TRUE, 
+                days_remaining = ?,
+                resolved_at = NOW()
+            WHERE id = ?
+        ");
+        $update_alert->bind_param("ii", $current_days_left, $alert_id);
+        $update_alert->execute();
         
         // Check if product stock is 0, then delete
-        $alert_info = $conn->query("SELECT product_id FROM waste_alerts WHERE id = $alert_id")->fetch_assoc();
         $product_check = $conn->query("SELECT current_stock FROM products WHERE id = {$alert_info['product_id']}")->fetch_assoc();
         
         if($product_check['current_stock'] <= 0) {
             $conn->query("DELETE FROM products WHERE id = {$alert_info['product_id']}");
         }
         
-        header("Location: alerts.php?message=Alert resolved!");
+        header("Location: alerts.php?message=Alert resolved! (Days left: " . ($current_days_left ?? 'N/A') . ")");
+        exit();
+        break;
+        
+    case 'delete_product':
+        $product_id = intval($_GET['product_id']);
+        
+        // Get product name for message
+        $product_query = $conn->query("SELECT name FROM products WHERE id = $product_id AND store_id = $store_id");
+        
+        if($product_query->num_rows > 0) {
+            $product_name = $product_query->fetch_assoc()['name'];
+            
+            // Delete any alerts for this product
+            $conn->query("DELETE FROM waste_alerts WHERE product_id = $product_id");
+            
+            // Delete the product
+            $delete_result = $conn->query("DELETE FROM products WHERE id = $product_id AND store_id = $store_id");
+            
+            if($delete_result) {
+                header("Location: alerts.php?message=✅ Product '$product_name' deleted successfully!");
+            } else {
+                header("Location: alerts.php?error=❌ Failed to delete product");
+            }
+        } else {
+            header("Location: alerts.php?error=❌ Product not found");
+        }
         exit();
         break;
         
@@ -67,7 +155,7 @@ switch($action) {
                       JOIN products p ON wa.product_id = p.id 
                       WHERE p.store_id = $store_id AND wa.is_resolved = FALSE");
         
-        // Get all products that need alerts (expiring OR low stock)
+        // Get all products that need alerts (expiring OR expired OR low stock)
         $products = $conn->query("
             SELECT 
                 id,
@@ -78,7 +166,7 @@ switch($action) {
             FROM products 
             WHERE store_id = $store_id 
             AND (
-                (expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY))
+                (expiry_date IS NOT NULL)  -- Any product with expiry date
                 OR 
                 (current_stock <= min_stock)
             )
@@ -88,28 +176,39 @@ switch($action) {
         
         while($product = $products->fetch_assoc()) {
             $product_id = $product['id'];
-            $days_left = $product['expiry_date'] ? 
-                (new DateTime($product['expiry_date']))->diff(new DateTime())->days : null;
+            $current_days_left = getDaysLeft($product['expiry_date']);
             
-            // Priority: Expiry alerts come first, then low stock
-            // Only create ONE alert per product
-            
-            if($product['expiry_date'] && $days_left !== null && $days_left <= 7) {
-                // Expiring soon alert (HIGHER PRIORITY)
-                $alert_type = 'expiring_soon';
-                $suggested_action = 'discount';
-                $discount_percent = $days_left <= 2 ? 70 : 50;
-                $severity = $days_left <= 2 ? 'critical' : 'high';
+            // Check if product is expired
+            if($product['expiry_date'] && $current_days_left !== null && $current_days_left <= 0) {
+                // EXPIRED PRODUCT - Create delete alert
+                $alert_type = 'expired';
+                $suggested_action = 'delete';
+                $discount_percent = NULL;
+                $severity = 'critical';
                 
                 $stmt = $conn->prepare("
                     INSERT INTO waste_alerts 
                     (product_id, alert_type, severity, suggested_action, discount_percent, days_remaining) 
                     VALUES (?, ?, ?, ?, ?, ?)
                 ");
-                $stmt->bind_param("isssii", $product_id, $alert_type, $severity, $suggested_action, $discount_percent, $days_left);
+                $stmt->bind_param("isssii", $product_id, $alert_type, $severity, $suggested_action, $discount_percent, 0);
+                
+            } elseif($product['expiry_date'] && $current_days_left !== null && $current_days_left <= 7) {
+                // Expiring soon alert (HIGHER PRIORITY)
+                $alert_type = 'expiring_soon';
+                $suggested_action = 'discount';
+                $discount_percent = $current_days_left <= 2 ? 70 : 50;
+                $severity = $current_days_left <= 2 ? 'critical' : 'high';
+                
+                $stmt = $conn->prepare("
+                    INSERT INTO waste_alerts 
+                    (product_id, alert_type, severity, suggested_action, discount_percent, days_remaining) 
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->bind_param("isssii", $product_id, $alert_type, $severity, $suggested_action, $discount_percent, $current_days_left);
                 
             } elseif($product['current_stock'] <= $product['min_stock']) {
-                // Low stock alert (LOWER PRIORITY - only if NOT expiring)
+                // Low stock alert (LOWER PRIORITY - only if NOT expiring/expired)
                 $alert_type = 'low_stock';
                 $suggested_action = 'bundle';
                 $discount_percent = NULL;
@@ -138,7 +237,15 @@ switch($action) {
 
 // Get active alerts - FIXED to prevent duplicates
 $stmt = $conn->prepare("
-    SELECT wa.*, p.name, p.category, p.expiry_date, p.current_stock, p.selling_price, p.discount_price
+    SELECT 
+        wa.*, 
+        p.name, 
+        p.category, 
+        p.expiry_date, 
+        p.current_stock, 
+        p.selling_price, 
+        p.discount_price,
+        DATEDIFF(p.expiry_date, CURDATE()) as current_days_left
     FROM waste_alerts wa
     JOIN products p ON wa.product_id = p.id
     WHERE p.store_id = ? 
@@ -166,7 +273,11 @@ $alerts_result = $stmt->get_result();
 // Store alerts in array to check for duplicates
 $unique_alerts = [];
 while($alert = $alerts_result->fetch_assoc()) {
-    // This ensures we only show one alert per product
+    // Use CURRENT calculated days, not stored days
+    $days_to_show = $alert['current_days_left'];
+    if($days_to_show < 0) $days_to_show = 0;
+    $alert['days_remaining'] = $days_to_show; // Override with current days
+    
     if(!isset($unique_alerts[$alert['product_id']])) {
         $unique_alerts[$alert['product_id']] = $alert;
     }
@@ -250,6 +361,10 @@ $resolved_count = $conn->query("
         .high { border-color: #fd7e14; }
         .medium { border-color: #ffc107; }
         .low { border-color: #0dcaf0; }
+        .expired { 
+            border-color: #343a40 !important;
+            background-color: #f8f9fa !important;
+        }
         .progress-card {
             background: linear-gradient(135deg, #198754, #20c997);
             color: white;
@@ -307,6 +422,14 @@ $resolved_count = $conn->query("
                 <?php if(isset($_GET['message'])): ?>
                     <div class="alert alert-success alert-dismissible fade show">
                         <?php echo htmlspecialchars($_GET['message']); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+                
+                <!-- Error Message -->
+                <?php if(isset($_GET['error'])): ?>
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        <?php echo htmlspecialchars($_GET['error']); ?>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
@@ -386,6 +509,7 @@ $resolved_count = $conn->query("
                                     <tbody>
                                         <?php foreach($unique_alerts as $alert): 
                                             $days_left = $alert['days_remaining'];
+                                            $is_expired = ($days_left !== null && $days_left <= 0);
                                             
                                             // Category icon
                                             $icons = [
@@ -394,7 +518,7 @@ $resolved_count = $conn->query("
                                             ];
                                             $icon = $icons[$alert['category']] ?? '📦';
                                         ?>
-                                        <tr class="alert-card <?php echo $alert['severity']; ?>">
+                                        <tr class="alert-card <?php echo $is_expired ? 'expired' : $alert['severity']; ?>">
                                             <td>
                                                 <strong><?php echo $icon . ' ' . htmlspecialchars($alert['name']); ?></strong>
                                             </td>
@@ -403,16 +527,21 @@ $resolved_count = $conn->query("
                                             </td>
                                             <td>
                                                 <span class="badge bg-<?php 
-                                                    echo $alert['severity'] == 'critical' ? 'danger' : 
-                                                           ($alert['severity'] == 'high' ? 'warning' : 'info');
+                                                    echo $is_expired ? 'dark' : 
+                                                           ($alert['severity'] == 'critical' ? 'danger' : 
+                                                           ($alert['severity'] == 'high' ? 'warning' : 'info'));
                                                 ?>">
-                                                    <?php echo ucfirst($alert['severity']); ?>
+                                                    <?php echo $is_expired ? 'EXPIRED' : ucfirst($alert['severity']); ?>
                                                 </span>
                                             </td>
                                             <td>
                                                 <?php if($alert['suggested_action'] == 'discount'): ?>
                                                     <span class="badge bg-success">
                                                         Discount <?php echo $alert['discount_percent']; ?>%
+                                                    </span>
+                                                <?php elseif($alert['suggested_action'] == 'delete'): ?>
+                                                    <span class="badge bg-dark">
+                                                        <i class="bi bi-trash"></i> Delete
                                                     </span>
                                                 <?php else: ?>
                                                     <span class="badge bg-info">
@@ -427,44 +556,67 @@ $resolved_count = $conn->query("
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <?php if($days_left > 0): ?>
+                                                <?php if($is_expired): ?>
+                                                    <span class="badge bg-dark">
+                                                        <i class="bi bi-exclamation-triangle"></i> EXPIRED
+                                                    </span>
+                                                <?php elseif($days_left > 0): ?>
                                                     <span class="badge bg-<?php echo $days_left <= 2 ? 'danger' : 'warning'; ?>">
                                                         <?php echo $days_left; ?> days
                                                     </span>
                                                 <?php else: ?>
-                                                    <span class="badge bg-secondary">EXPIRED</span>
+                                                    <span class="badge bg-secondary">N/A</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm">
-                                                    <!-- Quick Apply Discount Button -->
-                                                    <?php if($alert['suggested_action'] == 'discount'): ?>
-                                                        <a href="alerts.php?action=apply_discount&product_id=<?php echo $alert['product_id']; ?>&percent=<?php echo $alert['discount_percent']; ?>" 
-                                                           class="btn btn-success action-btn"
-                                                           onclick="return confirm('Apply <?php echo $alert['discount_percent']; ?>% discount? Stock will be cleared if sold out.')">
-                                                            <i class="bi bi-percent"></i> Apply
+                                                    <?php if($is_expired): ?>
+                                                        <!-- DELETE PRODUCT BUTTON (for expired items) -->
+                                                        <a href="alerts.php?action=delete_product&product_id=<?php echo $alert['product_id']; ?>" 
+                                                           class="btn btn-dark action-btn"
+                                                           onclick="return confirm('⚠️ WARNING: This product has EXPIRED!\\n\\nDelete \"<?php echo htmlspecialchars($alert['name']); ?>\" permanently? This cannot be undone.')">
+                                                            <i class="bi bi-trash"></i> Delete Product
+                                                        </a>
+                                                        
+                                                    <?php else: ?>
+                                                        <!-- Normal actions for non-expired items -->
+                                                        <?php if($alert['suggested_action'] == 'discount'): ?>
+                                                            <a href="alerts.php?action=apply_discount&product_id=<?php echo $alert['product_id']; ?>&percent=<?php echo $alert['discount_percent']; ?>" 
+                                                               class="btn btn-success action-btn"
+                                                               onclick="return confirm('Apply <?php echo $alert['discount_percent']; ?>% discount?\\nStock will be cleared if sold out.')">
+                                                                <i class="bi bi-percent"></i> Apply
+                                                            </a>
+                                                        <?php endif; ?>
+                                                        
+                                                        <!-- Mark as Donated -->
+                                                        <a href="alerts.php?action=mark_donation&product_id=<?php echo $alert['product_id']; ?>" 
+                                                           class="btn btn-info action-btn"
+                                                           onclick="return confirm('Mark as donated and remove from inventory?')">
+                                                            <i class="bi bi-heart"></i> Donate
+                                                        </a>
+                                                        
+                                                        <!-- Resolve Alert -->
+                                                        <a href="alerts.php?action=resolve&id=<?php echo $alert['id']; ?>" 
+                                                           class="btn btn-secondary action-btn"
+                                                           onclick="return confirm('Mark as resolved? Product will be removed if stock is 0.')">
+                                                            <i class="bi bi-check-circle"></i> Done
                                                         </a>
                                                     <?php endif; ?>
-                                                    
-                                                    <!-- Mark as Donated -->
-                                                    <a href="alerts.php?action=mark_donation&product_id=<?php echo $alert['product_id']; ?>" 
-                                                       class="btn btn-info action-btn"
-                                                       onclick="return confirm('Mark as donated and remove from inventory?')">
-                                                        <i class="bi bi-heart"></i> Donate
-                                                    </a>
-                                                    
-                                                    <!-- Resolve Alert -->
-                                                    <a href="alerts.php?action=resolve&id=<?php echo $alert['id']; ?>" 
-                                                       class="btn btn-secondary action-btn"
-                                                       onclick="return confirm('Mark as resolved? Product will be removed if stock is 0.')">
-                                                        <i class="bi bi-check-circle"></i> Done
-                                                    </a>
                                                 </div>
                                             </td>
                                         </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
+                            </div>
+                            
+                            <!-- Info Notice -->
+                            <div class="alert alert-info mt-3">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Note:</strong> 
+                                • <span class="badge bg-dark">EXPIRED</span> items can only be deleted
+                                • <span class="badge bg-danger">CRITICAL</span> items expire in ≤2 days
+                                • <span class="badge bg-warning">HIGH</span> priority items expire in 3-7 days
                             </div>
                             
                         <?php else: ?>
@@ -491,7 +643,7 @@ $resolved_count = $conn->query("
         setTimeout(() => {
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(alert => {
-                if(alert.classList.contains('alert-success')) {
+                if(alert.classList.contains('alert-success') || alert.classList.contains('alert-danger')) {
                     alert.remove();
                 }
             });

@@ -76,7 +76,6 @@ $categories = [
     'groceries' => 'Groceries 🍚',
     'snacks' => 'Snacks 🍫',
     'personal_care' => 'Personal Care 🧴',
-    'stationery' => 'Stationery 🖊️',
     'other' => 'Other 📦'
 ];
 ?>

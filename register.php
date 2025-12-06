@@ -52,9 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     // If no errors, register the store
     if (empty($errors)) {
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        // For demo, using md5 (simpler for hackathon)
-        $hashed_password = md5($password);
+        $hashed_password = md5($password); // Using md5 for hackathon simplicity
         
         $sql = "INSERT INTO stores (shop_name, owner_name, email, phone, address, password) 
                 VALUES (?, ?, ?, ?, ?, ?)";
@@ -74,40 +72,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             $success = "Registration successful! Redirecting to dashboard...";
             
-            // Add some sample products for the new store
-            addSampleProducts($conn, $store_id);
+            // ✅ NO AUTO PRODUCTS ADDED - Store starts EMPTY
+            // Store owner will add products manually
             
             // Redirect after 2 seconds
             header("refresh:2;url=store/dashboard.php");
+            exit();
         } else {
             $error = "Registration failed. Please try again.";
         }
     } else {
         $error = implode("<br>", $errors);
-    }
-}
-
-// Function to add sample products for new store
-function addSampleProducts($conn, $store_id) {
-    $sample_products = [
-        ['Amul Milk 500ml', 'dairy', 40, 60, 25, date('Y-m-d', strtotime('+3 days'))],
-        ['Sunrise Bread', 'bakery', 25, 40, 15, date('Y-m-d', strtotime('+2 days'))],
-        ['Wai Wai Noodles', 'snacks', 20, 30, 50, date('Y-m-d', strtotime('+180 days'))],
-        ['Coca Cola 500ml', 'beverages', 35, 60, 30, date('Y-m-d', strtotime('+365 days'))],
-        ['Chakra Rice 5kg', 'groceries', 400, 550, 10, date('Y-m-d', strtotime('+365 days'))],
-        ['Local Bananas (1kg)', 'fruits_veg', 50, 80, 20, date('Y-m-d', strtotime('+5 days'))],
-        ['Lux Soap', 'personal_care', 30, 45, 40, NULL],
-        ['Classmate Copy', 'stationery', 50, 70, 100, NULL]
-    ];
-    
-    $sql = "INSERT INTO products (store_id, name, category, buying_price, selling_price, current_stock, expiry_date) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)";
-    
-    $stmt = $conn->prepare($sql);
-    
-    foreach ($sample_products as $product) {
-        $stmt->bind_param("issddds", $store_id, $product[0], $product[1], $product[2], $product[3], $product[4], $product[5]);
-        $stmt->execute();
     }
 }
 ?>
@@ -145,17 +120,6 @@ function addSampleProducts($conn, $store_id) {
             text-align: center;
             position: relative;
             overflow: hidden;
-        }
-        
-        .register-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-size: cover;
-            opacity: 0.1;
         }
         
         .register-header h2 {
@@ -291,7 +255,6 @@ function addSampleProducts($conn, $store_id) {
             background-color: #198754;
             width: 100%;
         }
-   
         
         @media (max-width: 768px) {
             .register-container {
@@ -327,8 +290,6 @@ function addSampleProducts($conn, $store_id) {
         
         <div class="card register-card">
             <div class="card-body">
-              
-                
                 <?php if ($error): ?>
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
                         <i class="fas fa-exclamation-circle me-2"></i>

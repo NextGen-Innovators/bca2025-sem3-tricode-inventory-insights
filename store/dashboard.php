@@ -116,6 +116,7 @@ $total_products = $conn->query("SELECT COUNT(*) as total FROM products WHERE sto
                     </div>
                 </div>
                 
+
             </div>
         </div>
     </div>

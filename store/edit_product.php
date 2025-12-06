@@ -214,8 +214,8 @@ $categories = [
                                         
                                         <div class="col-md-4 mb-3">
                                             <label>Expiry Date</label>
-                                            <input type="date" name="expiry_date" class="form-control" 
-                                                   value="<?php echo isset($_POST['expiry_date']) ? $_POST['expiry_date'] : $product['expiry_date']; ?>">
+                                            <input type="date" name="expiry_date" id="expiry_date"
+       class="form-control" required   value="<?php echo isset($_POST['expiry_date']) ? $_POST['expiry_date'] : ''; ?>">
                                         </div>
                                     </div>
                                     
@@ -278,5 +278,15 @@ $categories = [
             </div>
         </div>
     </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+    const expiryInput = document.getElementById("expiry_date");
+
+    if (expiryInput) {
+        let today = new Date().toISOString().split("T")[0];
+        expiryInput.setAttribute("min", today);
+    }
+});
+    </script>
 </body>
 </html>

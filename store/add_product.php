@@ -215,8 +215,8 @@ $categories = [
                                         <!-- Expiry Date -->
                                         <div class="col-md-4 mb-3">
                                             <label class="form-label fw-bold">Expiry Date</label>
-                                            <input type="date" class="form-control" name="expiry_date" 
-                                                   value="<?php echo isset($_POST['expiry_date']) ? $_POST['expiry_date'] : ''; ?>">
+                                                <input type="date" name="expiry_date" id="expiry_date"
+                                                      class="form-control" required   value="<?php echo isset($_POST['expiry_date']) ? $_POST['expiry_date'] : ''; ?>">
                                             <small class="text-muted">For perishable items only</small>
                                         </div>
                                     </div>
@@ -267,6 +267,14 @@ $categories = [
     </div>
                                                 
     <script>
+        document.addEventListener("DOMContentLoaded", () => {
+    const expiryInput = document.getElementById("expiry_date");
+
+    if (expiryInput) {
+        let today = new Date().toISOString().split("T")[0];
+        expiryInput.setAttribute("min", today);
+    }
+});
         // Auto-set expiry to 7 days from now as default
         document.addEventListener('DOMContentLoaded', function() {
             const expiryInput = document.querySelector('input[name="expiry_date"]');

@@ -191,8 +191,23 @@ switch($action) {
                     (product_id, alert_type, severity, suggested_action, discount_percent, days_remaining) 
                     VALUES (?, ?, ?, ?, ?, ?)
                 ");
-                $stmt->bind_param("isssii", $product_id, $alert_type, $severity, $suggested_action, $discount_percent, 0);
-                
+               $prod_id = $product_id;
+$alert_type_var = $alert_type;
+$severity_var = $severity;
+$suggested_action_var = $suggested_action;
+$discount_percent_var = $discount_percent ?? 0; // replace NULL with 0
+$days_remaining_var = $current_days_left ?? 0; // replace NULL with 0
+
+$stmt->bind_param(
+    "isssii",
+    $prod_id,
+    $alert_type_var,
+    $severity_var,
+    $suggested_action_var,
+    $discount_percent_var,
+    $days_remaining_var
+);
+
             } elseif($product['expiry_date'] && $current_days_left !== null && $current_days_left <= 7) {
                 // Expiring soon alert (HIGHER PRIORITY)
                 $alert_type = 'expiring_soon';

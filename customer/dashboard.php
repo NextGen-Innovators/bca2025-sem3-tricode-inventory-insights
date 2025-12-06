@@ -456,9 +456,9 @@ $categories = $conn->query("SELECT DISTINCT category FROM products WHERE status 
         </div>
     </footer>
     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-   <script>
-    // Add to cart function
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ADD TO CART FUNCTION FOR DASHBOARD
     function addToCart(productId) {
         // Show loading state on the button
         const button = event.target.closest('.btn-add-cart') || event.target;
@@ -466,7 +466,7 @@ $categories = $conn->query("SELECT DISTINCT category FROM products WHERE status 
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         button.disabled = true;
         
-        // FIXED PATH: ../ajax/add_to_cart.php (since dashboard.php is in customer folder)
+        // AJAX call to add product to cart
         fetch('../ajax/add_to_cart.php', {
             method: 'POST',
             headers: {
@@ -481,16 +481,18 @@ $categories = $conn->query("SELECT DISTINCT category FROM products WHERE status 
             button.disabled = false;
             
             // Show notification
-            showToast(data.message, data.success ? 'success' : 'error');
-            
-            // Update cart count
-            updateCartCount(data.cart_count || 0);
+            if(data.success) {
+                showToast('✅ ' + data.message, 'success');
+                updateCartCount(data.cart_count || 0);
+            } else {
+                showToast('❌ ' + data.message, 'error');
+            }
         })
         .catch(error => {
             console.error('Error:', error);
             button.innerHTML = '<i class="fas fa-cart-plus"></i>';
             button.disabled = false;
-            showToast('Network error. Please try again.', 'error');
+            showToast('❌ Network error. Please try again.', 'error');
         });
     }
     
@@ -516,7 +518,6 @@ $categories = $conn->query("SELECT DISTINCT category FROM products WHERE status 
         toast.innerHTML = `
             <div class="d-flex">
                 <div class="toast-body">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
                     ${message}
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="document.getElementById('${toastId}').remove()"></button>
@@ -536,17 +537,19 @@ $categories = $conn->query("SELECT DISTINCT category FROM products WHERE status 
     function updateCartCount(count) {
         let cartBadge = document.getElementById('cart-badge');
         if (!cartBadge) {
-            // Create cart badge
-            const cartLinks = document.querySelectorAll('a[href="cart.php"], .nav-link:contains("Cart")');
-            if (cartLinks.length > 0) {
-                const cartLink = cartLinks[0];
-                cartBadge = document.createElement('span');
-                cartBadge.id = 'cart-badge';
-                cartBadge.className = 'badge bg-danger rounded-pill';
-                cartBadge.style.marginLeft = '5px';
+            // Create cart badge if doesn't exist
+            cartBadge = document.createElement('span');
+            cartBadge.id = 'cart-badge';
+            cartBadge.className = 'badge bg-danger rounded-pill';
+            cartBadge.style.marginLeft = '5px';
+            
+            // Try to find cart link in dropdown
+            const cartLink = document.querySelector('a[href="cart.php"]');
+            if (cartLink) {
                 cartLink.appendChild(cartBadge);
             }
         }
+        
         if (cartBadge) {
             if (count > 0) {
                 cartBadge.textContent = count;
@@ -557,9 +560,19 @@ $categories = $conn->query("SELECT DISTINCT category FROM products WHERE status 
         }
     }
     
-    // Initialize on page load
+    // Initialize cart count on page load
     document.addEventListener('DOMContentLoaded', function() {
-        updateCartCount(0);
+        // Check if we have cart items in session
+        fetch('../ajax/get_cart_count.php')
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    updateCartCount(data.cart_count || 0);
+                }
+            })
+            .catch(error => {
+                console.error('Error getting cart count:', error);
+            });
     });
 </script>
 </body>

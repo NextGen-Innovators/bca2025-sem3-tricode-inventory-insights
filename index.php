@@ -70,7 +70,7 @@
             
             <div class="d-flex gap-3 justify-content-center">
                 <a href="login.php" class="btn btn-light btn-custom">Login</a>
-                <a href="register.php" class="btn btn-outline-light btn-custom">Register Store</a>
+                <a href="register.php" class="btn btn-outline-light btn-custom">Register </a>
             </div>
             
             

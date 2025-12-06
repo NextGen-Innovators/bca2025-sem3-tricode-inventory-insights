@@ -14,25 +14,55 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
     
-    // Validation
+    // Validation array
     $errors = [];
     
+    // Shop Name Validation: Only letters, spaces, and basic punctuation
     if (empty($shop_name)) {
         $errors[] = "Shop name is required";
+    } elseif (!preg_match('/^[a-zA-Z\s\-\.\&\',]+$/u', $shop_name)) {
+        $errors[] = "Shop name can only contain letters, spaces, hyphens, dots, ampersands, and apostrophes";
+    } elseif (strlen($shop_name) < 3) {
+        $errors[] = "Shop name must be at least 3 characters";
     }
     
+    // Owner Name Validation: Only letters and spaces
     if (empty($owner_name)) {
         $errors[] = "Owner name is required";
+    } elseif (!preg_match('/^[a-zA-Z\s]+$/u', $owner_name)) {
+        $errors[] = "Owner name can only contain letters and spaces";
+    } elseif (strlen($owner_name) < 3) {
+        $errors[] = "Owner name must be at least 3 characters";
     }
     
+    // Email Validation
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors[] = "Valid email is required";
     }
     
-    if (strlen($password) < 6) {
-        $errors[] = "Password must be at least 6 characters";
+    // Phone Number Validation: Must start with 97 or 98 and be 10 digits
+    if (empty($phone)) {
+        $errors[] = "Phone number is required";
+    } elseif (!preg_match('/^(97|98)[0-9]{8}$/', $phone)) {
+        $errors[] = "Phone number must start with 97 or 98 and be 10 digits total (e.g., 9812345678)";
     }
     
+    // Password Validation: Must include capital, small letter, symbol, and number
+    if (empty($password)) {
+        $errors[] = "Password is required";
+    } elseif (strlen($password) < 8) {
+        $errors[] = "Password must be at least 8 characters";
+    } elseif (!preg_match('/[A-Z]/', $password)) {
+        $errors[] = "Password must contain at least one uppercase letter";
+    } elseif (!preg_match('/[a-z]/', $password)) {
+        $errors[] = "Password must contain at least one lowercase letter";
+    } elseif (!preg_match('/[0-9]/', $password)) {
+        $errors[] = "Password must contain at least one number";
+    } elseif (!preg_match('/[!@#$%^&*(),.?":{}|<>]/', $password)) {
+        $errors[] = "Password must contain at least one special character (!@#$%^&* etc.)";
+    }
+    
+    // Confirm Password
     if ($password != $confirm_password) {
         $errors[] = "Passwords do not match";
     }
@@ -52,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     // If no errors, register the store
     if (empty($errors)) {
-        $hashed_password = md5($password); // Using md5 for hackathon simplicity
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
         
         $sql = "INSERT INTO stores (shop_name, owner_name, email, phone, address, password) 
                 VALUES (?, ?, ?, ?, ?, ?)";
@@ -65,15 +95,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $store_id = $stmt->insert_id;
             
             // Create session
+            session_start();
             $_SESSION['store_id'] = $store_id;
             $_SESSION['shop_name'] = $shop_name;
             $_SESSION['owner_name'] = $owner_name;
             $_SESSION['email'] = $email;
             
             $success = "Registration successful! Redirecting to dashboard...";
-            
-            // ✅ NO AUTO PRODUCTS ADDED - Store starts EMPTY
-            // Store owner will add products manually
             
             // Redirect after 2 seconds
             header("refresh:2;url=store/dashboard.php");
@@ -108,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         .register-container {
-            max-width: 600px;
+            max-width: 700px;
             margin: 30px auto;
         }
         
@@ -118,20 +146,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             padding: 30px;
             border-radius: 15px 15px 0 0;
             text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .register-header h2 {
-            position: relative;
-            z-index: 1;
-            font-weight: 700;
-        }
-        
-        .register-header p {
-            position: relative;
-            z-index: 1;
-            opacity: 0.9;
         }
         
         .register-card {
@@ -147,24 +161,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .form-label {
             font-weight: 600;
             color: #495057;
-            margin-bottom: 8px;
         }
         
-        .form-control, .form-select {
-            border: 2px solid #e9ecef;
+        .form-control {
+            border: 2px solid #dee2e6;
             border-radius: 8px;
             padding: 12px 15px;
             transition: all 0.3s;
         }
         
-        .form-control:focus, .form-select:focus {
+        .form-control:focus {
             border-color: var(--primary-green);
             box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
         }
         
         .input-group-text {
             background-color: var(--light-green);
-            border: 2px solid #e9ecef;
+            border: 2px solid #dee2e6;
             border-right: none;
         }
         
@@ -174,11 +187,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border: none;
             padding: 15px 30px;
             font-weight: 600;
-            font-size: 1.1rem;
             border-radius: 10px;
             transition: all 0.3s;
             width: 100%;
-            margin-top: 10px;
         }
         
         .btn-register:hover {
@@ -186,81 +197,82 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             box-shadow: 0 5px 15px rgba(25, 135, 84, 0.3);
         }
         
-        .login-link {
-            text-align: center;
+        .validation-rules {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
             margin-top: 20px;
-            color: #6c757d;
+            border-left: 4px solid var(--primary-green);
         }
         
-        .login-link a {
-            color: var(--primary-green);
-            text-decoration: none;
-            font-weight: 600;
-        }
-        
-        .login-link a:hover {
-            text-decoration: underline;
-        }
-        
-        .benefits-list {
-            background-color: var(--light-green);
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        
-        .benefits-list h6 {
+        .validation-rules h6 {
             color: var(--dark-green);
-            margin-bottom: 15px;
-        }
-        
-        .benefit-item {
-            display: flex;
-            align-items: center;
             margin-bottom: 10px;
         }
         
-        .benefit-icon {
-            color: var(--primary-green);
+        .rule-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .rule-item i {
             margin-right: 10px;
-            font-size: 1.2rem;
+            width: 20px;
+        }
+        
+        .rule-valid {
+            color: var(--primary-green);
+        }
+        
+        .rule-invalid {
+            color: #dc3545;
         }
         
         .password-strength {
-            height: 5px;
+            margin-top: 10px;
+        }
+        
+        .strength-meter {
+            height: 6px;
             background-color: #e9ecef;
             border-radius: 3px;
             margin-top: 5px;
             overflow: hidden;
         }
         
-        .password-strength-bar {
+        .strength-fill {
             height: 100%;
             width: 0%;
-            transition: width 0.3s;
             border-radius: 3px;
+            transition: width 0.3s;
         }
         
-        .password-strength-weak {
-            background-color: #dc3545;
-            width: 33%;
+        .strength-0 { width: 0%; background-color: #dc3545; }
+        .strength-1 { width: 25%; background-color: #dc3545; }
+        .strength-2 { width: 50%; background-color: #ffc107; }
+        .strength-3 { width: 75%; background-color: #17a2b8; }
+        .strength-4 { width: 100%; background-color: #28a745; }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 5px;
+            display: none;
         }
         
-        .password-strength-medium {
-            background-color: #ffc107;
-            width: 66%;
-        }
-        
-        .password-strength-strong {
-            background-color: #198754;
-            width: 100%;
+        .valid-message {
+            color: #28a745;
+            font-size: 0.875rem;
+            margin-top: 5px;
+            display: none;
         }
         
         @media (max-width: 768px) {
             .register-container {
                 margin: 10px;
             }
-            
             .card-body {
                 padding: 20px;
             }
@@ -274,10 +286,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <a class="navbar-brand fw-bold" href="index.php">
                 <i class="fas fa-recycle me-2"></i> WasteWise Nepal
             </a>
-            <div class="navbar-nav">
-                <a href="index.php" class="nav-link">Home</a>
-                <a href="login.php" class="nav-link">Login</a>
-            </div>
         </div>
     </nav>
 
@@ -294,7 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
                         <i class="fas fa-exclamation-circle me-2"></i>
                         <?php echo $error; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
                 
@@ -305,144 +313,161 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     </div>
                 <?php endif; ?>
                 
-                <form method="POST" action="" id="registrationForm">
+                <form method="POST" action="" id="registrationForm" novalidate>
                     <h5 class="mb-4 text-success"><i class="fas fa-store-alt me-2"></i> Store Information</h5>
                     
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Shop Name *</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-store"></i></span>
-                                <input type="text" class="form-control" name="shop_name" 
-                                       placeholder="e.g., Kathmandu Kirana Store" 
-                                       value="<?php echo isset($_POST['shop_name']) ? htmlspecialchars($_POST['shop_name']) : ''; ?>" 
-                                       required>
-                            </div>
-                            <small class="text-muted">Your business/store name</small>
+                    <!-- Shop Name -->
+                    <div class="mb-3">
+                        <label class="form-label">Shop Name *</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-store"></i></span>
+                            <input type="text" class="form-control" name="shop_name" id="shop_name"
+                                   placeholder="e.g., Kathmandu Kirana Store" 
+                                   value="<?php echo isset($_POST['shop_name']) ? htmlspecialchars($_POST['shop_name']) : ''; ?>"
+                                   required>
                         </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Owner Name *</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                <input type="text" class="form-control" name="owner_name" 
-                                       placeholder="Your full name"
-                                       value="<?php echo isset($_POST['owner_name']) ? htmlspecialchars($_POST['owner_name']) : ''; ?>" 
-                                       required>
-                            </div>
-                            <small class="text-muted">Name of the store owner</small>
-                        </div>
+                        <div class="error-message" id="shop_name_error"></div>
+                        <div class="valid-message" id="shop_name_valid">✓ Valid shop name</div>
+                        <small class="text-muted">Letters, spaces, hyphens, dots, &, ' only</small>
                     </div>
                     
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Email Address *</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                <input type="email" class="form-control" name="email" 
-                                       placeholder="store@example.com"
-                                       value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" 
-                                       required>
-                            </div>
-                            <small class="text-muted">We'll never share your email</small>
+                    <!-- Owner Name -->
+                    <div class="mb-3">
+                        <label class="form-label">Owner Name *</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" class="form-control" name="owner_name" id="owner_name"
+                                   placeholder="Your full name"
+                                   value="<?php echo isset($_POST['owner_name']) ? htmlspecialchars($_POST['owner_name']) : ''; ?>"
+                                   required>
                         </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Phone Number *</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
-                                <input type="tel" class="form-control" name="phone" 
-                                       placeholder="98XXXXXXXX"
-                                       value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>" 
-                                       required>
-                            </div>
-                            <small class="text-muted">For order notifications</small>
-                        </div>
+                        <div class="error-message" id="owner_name_error"></div>
+                        <div class="valid-message" id="owner_name_valid">✓ Valid owner name</div>
+                        <small class="text-muted">Letters and spaces only</small>
                     </div>
                     
+                    <!-- Email -->
+                    <div class="mb-3">
+                        <label class="form-label">Email Address *</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                            <input type="email" class="form-control" name="email" id="email"
+                                   placeholder="store@example.com"
+                                   value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>"
+                                   required>
+                        </div>
+                        <div class="error-message" id="email_error"></div>
+                        <div class="valid-message" id="email_valid">✓ Valid email format</div>
+                    </div>
+                    
+                    <!-- Phone Number -->
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number *</label>
+                        <div class="input-group">
+                            <span class="input-group-text">+977</span>
+                            <input type="tel" class="form-control" name="phone" id="phone"
+                                   placeholder="9812345678"
+                                   value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>"
+                                   maxlength="10"
+                                   required>
+                        </div>
+                        <div class="error-message" id="phone_error"></div>
+                        <div class="valid-message" id="phone_valid">✓ Valid phone number</div>
+                        <small class="text-muted">Must start with 97 or 98 (10 digits total)</small>
+                    </div>
+                    
+                    <!-- Address -->
                     <div class="mb-3">
                         <label class="form-label">Store Address</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
-                            <textarea class="form-control" name="address" rows="2" 
-                                      placeholder="Enter your store address"><?php echo isset($_POST['address']) ? htmlspecialchars($_POST['address']) : ''; ?></textarea>
-                        </div>
-                        <small class="text-muted">Optional: For donation pickups</small>
+                        <textarea class="form-control" name="address" rows="2" 
+                                  placeholder="Enter your store address"><?php echo isset($_POST['address']) ? htmlspecialchars($_POST['address']) : ''; ?></textarea>
                     </div>
                     
                     <hr class="my-4">
                     
                     <h5 class="mb-4 text-success"><i class="fas fa-lock me-2"></i> Account Security</h5>
                     
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Password *</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-key"></i></span>
-                                <input type="password" class="form-control" name="password" 
-                                       id="password" placeholder="Minimum 6 characters" 
-                                       required minlength="6">
-                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                            <div class="password-strength mt-2">
-                                <div class="password-strength-bar" id="passwordStrength"></div>
-                            </div>
-                            <small class="text-muted" id="passwordHint">Enter a strong password</small>
+                    <!-- Password -->
+                    <div class="mb-3">
+                        <label class="form-label">Password *</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-key"></i></span>
+                            <input type="password" class="form-control" name="password" id="password"
+                                   placeholder="Create a strong password"
+                                   required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
                         
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Confirm Password *</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-key"></i></span>
-                                <input type="password" class="form-control" name="confirm_password" 
-                                       id="confirmPassword" placeholder="Re-enter password" 
-                                       required>
-                                <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                        <!-- Password Strength Meter -->
+                        <div class="password-strength">
+                            <div class="strength-meter">
+                                <div class="strength-fill" id="strengthFill"></div>
                             </div>
-                            <div id="passwordMatch" class="mt-2"></div>
+                            <small id="strengthText" class="text-muted"></small>
+                        </div>
+                        
+                        <!-- Password Rules -->
+                        <div class="validation-rules mt-3">
+                            <h6>Password must contain:</h6>
+                            <div class="rule-item" id="rule-length">
+                                <i class="fas fa-circle" id="rule-length-icon"></i>
+                                <span>At least 8 characters</span>
+                            </div>
+                            <div class="rule-item" id="rule-uppercase">
+                                <i class="fas fa-circle" id="rule-uppercase-icon"></i>
+                                <span>At least one uppercase letter (A-Z)</span>
+                            </div>
+                            <div class="rule-item" id="rule-lowercase">
+                                <i class="fas fa-circle" id="rule-lowercase-icon"></i>
+                                <span>At least one lowercase letter (a-z)</span>
+                            </div>
+                            <div class="rule-item" id="rule-number">
+                                <i class="fas fa-circle" id="rule-number-icon"></i>
+                                <span>At least one number (0-9)</span>
+                            </div>
+                            <div class="rule-item" id="rule-special">
+                                <i class="fas fa-circle" id="rule-special-icon"></i>
+                                <span>At least one special character (!@#$%^&* etc.)</span>
+                            </div>
                         </div>
                     </div>
                     
+                    <!-- Confirm Password -->
+                    <div class="mb-4">
+                        <label class="form-label">Confirm Password *</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-key"></i></span>
+                            <input type="password" class="form-control" name="confirm_password" id="confirm_password"
+                                   placeholder="Re-enter your password"
+                                   required>
+                            <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="error-message" id="confirm_password_error"></div>
+                        <div class="valid-message" id="confirm_password_valid">✓ Passwords match</div>
+                    </div>
+                    
+                    <!-- Terms -->
                     <div class="form-check mb-4">
                         <input class="form-check-input" type="checkbox" id="terms" required>
                         <label class="form-check-label" for="terms">
-                            I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms of Service</a> and <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">Privacy Policy</a>
+                            I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms of Service</a>
                         </label>
+                        <div class="error-message" id="terms_error"></div>
                     </div>
                     
-                    <button type="submit" class="btn btn-register">
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-register" id="submitBtn">
                         <i class="fas fa-user-plus me-2"></i> Register Store
                     </button>
+                    
+                    <div class="text-center mt-3">
+                        <p>Already have an account? <a href="login.php">Login here</a></p>
+                    </div>
                 </form>
-                
-                <div class="login-link">
-                    <p>Already have an account? <a href="login.php">Login here</a></p>
-                </div>
-                
-                <!-- Benefits Section -->
-                <div class="benefits-list">
-                    <h6><i class="fas fa-gift me-2"></i> Benefits of Joining WasteWise:</h6>
-                    <div class="benefit-item">
-                        <span class="benefit-icon"><i class="fas fa-chart-line"></i></span>
-                        <span>Reduce inventory waste by up to 40%</span>
-                    </div>
-                    <div class="benefit-item">
-                        <span class="benefit-icon"><i class="fas fa-hand-holding-heart"></i></span>
-                        <span>Connect with charities for donations</span>
-                    </div>
-                    <div class="benefit-item">
-                        <span class="benefit-icon"><i class="fas fa-bullhorn"></i></span>
-                        <span>Smart alerts for expiring products</span>
-                    </div>
-                    <div class="benefit-item">
-                        <span class="benefit-icon"><i class="fas fa-chart-pie"></i></span>
-                        <span>Detailed analytics and reports</span>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -456,38 +481,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>By registering, you agree to use WasteWise Nepal for legitimate business purposes only.</p>
-                    <p>You are responsible for maintaining the accuracy of your inventory data.</p>
+                    <p>By registering, you agree to use WasteWise Nepal for legitimate business purposes.</p>
+                    <p>You are responsible for maintaining accurate inventory data.</p>
                     <p>We provide tools to reduce waste, but ultimate responsibility lies with the store owner.</p>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Privacy Modal -->
-    <div class="modal fade" id="privacyModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Privacy Policy</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>We store your store information securely and never share it with third parties.</p>
-                    <p>Inventory data is used only for waste reduction suggestions.</p>
-                    <p>You can delete your account and data at any time.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="bg-dark text-white py-4 mt-4">
-        <div class="container text-center">
-            <p class="mb-0">♻️ WasteWise Nepal - Smart Retail Waste Reduction Platform</p>
-            <small>Team Tricode - NextGen Innovators Club Hackathon</small>
-        </div>
-    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -495,126 +495,286 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         document.getElementById('togglePassword').addEventListener('click', function() {
             const passwordInput = document.getElementById('password');
             const icon = this.querySelector('i');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
         });
         
-        // Toggle confirm password visibility
         document.getElementById('toggleConfirmPassword').addEventListener('click', function() {
-            const confirmInput = document.getElementById('confirmPassword');
+            const confirmInput = document.getElementById('confirm_password');
             const icon = this.querySelector('i');
-            
-            if (confirmInput.type === 'password') {
-                confirmInput.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                confirmInput.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
+            const type = confirmInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            confirmInput.setAttribute('type', type);
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
         });
         
-        // Password strength checker
-        document.getElementById('password').addEventListener('input', function() {
-            const password = this.value;
-            const strengthBar = document.getElementById('passwordStrength');
-            const hint = document.getElementById('passwordHint');
+        // Validation functions
+        function validateShopName() {
+            const shopName = document.getElementById('shop_name').value.trim();
+            const errorEl = document.getElementById('shop_name_error');
+            const validEl = document.getElementById('shop_name_valid');
             
-            // Reset
-            strengthBar.className = 'password-strength-bar';
-            hint.textContent = 'Enter a strong password';
-            hint.className = 'text-muted';
-            
-            if (password.length === 0) {
-                return;
+            if (shopName.length === 0) {
+                errorEl.textContent = 'Shop name is required';
+                errorEl.style.display = 'block';
+                validEl.style.display = 'none';
+                return false;
             }
+            
+            if (!/^[a-zA-Z\s\-\.\&\',]+$/u.test(shopName)) {
+                errorEl.textContent = 'Only letters, spaces, hyphens, dots, &, \' allowed';
+                errorEl.style.display = 'block';
+                validEl.style.display = 'none';
+                return false;
+            }
+            
+            if (shopName.length < 3) {
+                errorEl.textContent = 'Must be at least 3 characters';
+                errorEl.style.display = 'block';
+                validEl.style.display = 'none';
+                return false;
+            }
+            
+            errorEl.style.display = 'none';
+            validEl.style.display = 'block';
+            return true;
+        }
+        
+        function validateOwnerName() {
+            const ownerName = document.getElementById('owner_name').value.trim();
+            const errorEl = document.getElementById('owner_name_error');
+            const validEl = document.getElementById('owner_name_valid');
+            
+            if (ownerName.length === 0) {
+                errorEl.textContent = 'Owner name is required';
+                errorEl.style.display = 'block';
+                validEl.style.display = 'none';
+                return false;
+            }
+            
+            if (!/^[a-zA-Z\s]+$/u.test(ownerName)) {
+                errorEl.textContent = 'Only letters and spaces allowed';
+                errorEl.style.display = 'block';
+                validEl.style.display = 'none';
+                return false;
+            }
+            
+            if (ownerName.length < 3) {
+                errorEl.textContent = 'Must be at least 3 characters';
+                errorEl.style.display = 'block';
+                validEl.style.display = 'none';
+                return false;
+            }
+            
+            errorEl.style.display = 'none';
+            validEl.style.display = 'block';
+            return true;
+        }
+        
+        function validateEmail() {
+            const email = document.getElementById('email').value.trim();
+            const errorEl = document.getElementById('email_error');
+            const validEl = document.getElementById('email_valid');
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (email.length === 0) {
+                errorEl.textContent = 'Email is required';
+                errorEl.style.display = 'block';
+                validEl.style.display = 'none';
+                return false;
+            }
+            
+            if (!emailRegex.test(email)) {
+                errorEl.textContent = 'Please enter a valid email address';
+                errorEl.style.display = 'block';
+                validEl.style.display = 'none';
+                return false;
+            }
+            
+            errorEl.style.display = 'none';
+            validEl.style.display = 'block';
+            return true;
+        }
+        
+        function validatePhone() {
+            const phone = document.getElementById('phone').value.trim();
+            const errorEl = document.getElementById('phone_error');
+            const validEl = document.getElementById('phone_valid');
+            const phoneRegex = /^(97|98)[0-9]{8}$/;
+            
+            if (phone.length === 0) {
+                errorEl.textContent = 'Phone number is required';
+                errorEl.style.display = 'block';
+                validEl.style.display = 'none';
+                return false;
+            }
+            
+            if (!phoneRegex.test(phone)) {
+                errorEl.textContent = 'Must start with 97 or 98 and be 10 digits';
+                errorEl.style.display = 'block';
+                validEl.style.display = 'none';
+                return false;
+            }
+            
+            errorEl.style.display = 'none';
+            validEl.style.display = 'block';
+            return true;
+        }
+        
+        function validatePassword() {
+            const password = document.getElementById('password').value;
+            const strengthFill = document.getElementById('strengthFill');
+            const strengthText = document.getElementById('strengthText');
             
             let strength = 0;
+            const rules = {
+                length: password.length >= 8,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /[0-9]/.test(password),
+                special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+            };
             
-            // Length check
-            if (password.length >= 8) strength++;
+            // Update rule icons
+            Object.keys(rules).forEach(rule => {
+                const icon = document.getElementById(`rule-${rule}-icon`);
+                const ruleEl = document.getElementById(`rule-${rule}`);
+                if (rules[rule]) {
+                    icon.className = 'fas fa-check-circle rule-valid';
+                    ruleEl.classList.add('rule-valid');
+                    ruleEl.classList.remove('rule-invalid');
+                    strength++;
+                } else {
+                    icon.className = 'fas fa-times-circle rule-invalid';
+                    ruleEl.classList.add('rule-invalid');
+                    ruleEl.classList.remove('rule-valid');
+                }
+            });
             
-            // Contains numbers
-            if (/\d/.test(password)) strength++;
+            // Update strength meter
+            strengthFill.className = `strength-fill strength-${strength}`;
             
-            // Contains special characters
-            if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
+            // Update strength text
+            const strengthLabels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+            const strengthColors = ['text-danger', 'text-danger', 'text-warning', 'text-info', 'text-success'];
+            strengthText.textContent = strengthLabels[strength];
+            strengthText.className = strengthColors[strength];
             
-            // Contains both uppercase and lowercase
-            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
-            
-            // Update UI
-            if (strength <= 1) {
-                strengthBar.classList.add('password-strength-weak');
-                hint.textContent = 'Weak password';
-                hint.className = 'text-danger';
-            } else if (strength <= 3) {
-                strengthBar.classList.add('password-strength-medium');
-                hint.textContent = 'Medium strength password';
-                hint.className = 'text-warning';
-            } else {
-                strengthBar.classList.add('password-strength-strong');
-                hint.textContent = 'Strong password!';
-                hint.className = 'text-success';
-            }
-        });
+            return strength === 5; // All rules must pass
+        }
         
-        // Password match checker
-        document.getElementById('confirmPassword').addEventListener('input', function() {
+        function validateConfirmPassword() {
             const password = document.getElementById('password').value;
-            const confirmPassword = this.value;
-            const matchDiv = document.getElementById('passwordMatch');
+            const confirmPassword = document.getElementById('confirm_password').value;
+            const errorEl = document.getElementById('confirm_password_error');
+            const validEl = document.getElementById('confirm_password_valid');
             
             if (confirmPassword.length === 0) {
-                matchDiv.innerHTML = '';
-                return;
+                errorEl.textContent = 'Please confirm your password';
+                errorEl.style.display = 'block';
+                validEl.style.display = 'none';
+                return false;
             }
-            
-            if (password === confirmPassword) {
-                matchDiv.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i> Passwords match</span>';
-            } else {
-                matchDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i> Passwords do not match</span>';
-            }
-        });
-        
-        // Form validation
-        document.getElementById('registrationForm').addEventListener('submit', function(e) {
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const terms = document.getElementById('terms').checked;
             
             if (password !== confirmPassword) {
-                e.preventDefault();
-                alert('Passwords do not match!');
-                return;
+                errorEl.textContent = 'Passwords do not match';
+                errorEl.style.display = 'block';
+                validEl.style.display = 'none';
+                return false;
             }
+            
+            errorEl.style.display = 'none';
+            validEl.style.display = 'block';
+            return true;
+        }
+        
+        function validateTerms() {
+            const terms = document.getElementById('terms').checked;
+            const errorEl = document.getElementById('terms_error');
             
             if (!terms) {
-                e.preventDefault();
-                alert('You must agree to the terms and conditions!');
-                return;
+                errorEl.textContent = 'You must agree to the terms';
+                errorEl.style.display = 'block';
+                return false;
             }
             
-            // Show loading
-            const submitBtn = this.querySelector('button[type="submit"]');
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Registering...';
-            submitBtn.disabled = true;
+            errorEl.style.display = 'none';
+            return true;
+        }
+        
+        // Real-time validation
+        document.getElementById('shop_name').addEventListener('input', validateShopName);
+        document.getElementById('shop_name').addEventListener('blur', validateShopName);
+        
+        document.getElementById('owner_name').addEventListener('input', validateOwnerName);
+        document.getElementById('owner_name').addEventListener('blur', validateOwnerName);
+        
+        document.getElementById('email').addEventListener('input', validateEmail);
+        document.getElementById('email').addEventListener('blur', validateEmail);
+        
+        document.getElementById('phone').addEventListener('input', function(e) {
+            // Auto-format: only numbers, max 10 digits
+            this.value = this.value.replace(/\D/g, '').substring(0, 10);
+            validatePhone();
         });
         
-        // Auto-format phone number
-        document.querySelector('input[name="phone"]').addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.length > 10) value = value.substring(0, 10);
-            e.target.value = value;
+        document.getElementById('phone').addEventListener('blur', validatePhone);
+        
+        document.getElementById('password').addEventListener('input', function() {
+            validatePassword();
+            // Also validate confirm password when password changes
+            if (document.getElementById('confirm_password').value.length > 0) {
+                validateConfirmPassword();
+            }
+        });
+        
+        document.getElementById('confirm_password').addEventListener('input', validateConfirmPassword);
+        
+        document.getElementById('terms').addEventListener('change', validateTerms);
+        
+        // Form submission
+        document.getElementById('registrationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const validations = [
+                validateShopName(),
+                validateOwnerName(),
+                validateEmail(),
+                validatePhone(),
+                validatePassword(),
+                validateConfirmPassword(),
+                validateTerms()
+            ];
+            
+            const allValid = validations.every(v => v === true);
+            
+            if (allValid) {
+                // Show loading state
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Registering...';
+                submitBtn.disabled = true;
+                
+                // Submit form
+                this.submit();
+            } else {
+                // Scroll to first error
+                const firstError = document.querySelector('.error-message[style*="display: block"]');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
+        
+        // Initialize validation on page load for pre-filled values
+        document.addEventListener('DOMContentLoaded', function() {
+            validateShopName();
+            validateOwnerName();
+            validateEmail();
+            validatePhone();
+            validatePassword();
+            validateConfirmPassword();
         });
     </script>
 </body>

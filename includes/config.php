@@ -1,10 +1,25 @@
 <?php
-session_start();
+// includes/config.php
 date_default_timezone_set('Asia/Kathmandu');
 
-$conn = new mysqli('localhost', 'root', '', 'wastewise_nepal');
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "wastewise_nepal";
 
-if($conn->connect_error) {
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
+}
+
+// Function to sanitize input
+function sanitize_input($data) {
+    $data = trim($data);
+    $data = stripslashes($data);
+    $data = htmlspecialchars($data);
+    return $data;
 }
 ?>

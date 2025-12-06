@@ -66,3 +66,14 @@ CREATE TABLE customers (
     password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
+-- creating table for orders
+CREATE TABLE customer_orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('pending','completed','cancelled') DEFAULT 'pending',
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+);

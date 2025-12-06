@@ -1,0 +1,57 @@
+CREATE DATABASE wastewise_nepal;
+USE wastewise_nepal;
+
+-- creating table of store
+CREATE TABLE stores (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    shop_name VARCHAR(100) NOT NULL,
+    owner_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    phone VARCHAR(15),
+    address TEXT,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- creating table of products
+CREATE TABLE products (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    store_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    category ENUM(
+        'dairy',
+        'bakery', 
+        'fruits_veg',
+        'beverages',
+        'groceries',
+        'snacks',
+        'personal_care',
+        'stationery',
+        'other'
+    ) NOT NULL,
+    buying_price DECIMAL(10,2) NOT NULL,
+    selling_price DECIMAL(10,2) NOT NULL,
+    discount_price DECIMAL(10,2) DEFAULT NULL,
+    current_stock INT DEFAULT 0,
+    min_stock INT DEFAULT 5,
+    expiry_date DATE,
+    added_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_sold_date DATE,
+    status ENUM('active', 'inactive', 'donated') DEFAULT 'active',
+    FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+);
+
+-- creating table for waste alerts
+CREATE TABLE waste_alerts (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    product_id INT NOT NULL,
+    alert_type ENUM('expiring_soon', 'low_stock', 'slow_moving') NOT NULL,
+    severity ENUM('critical', 'high', 'medium', 'low') NOT NULL,
+    suggested_action ENUM('discount', 'donate', 'repurpose', 'bundle') NOT NULL,
+    discount_percent INT,
+    days_remaining INT,
+    is_resolved BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP NULL,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);

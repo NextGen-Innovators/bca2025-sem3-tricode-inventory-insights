@@ -77,6 +77,7 @@ CREATE TABLE customer_orders (
     status ENUM('pending','completed','cancelled') DEFAULT 'pending',
     FOREIGN KEY (customer_id) REFERENCES customers(id)
 );
+-- creating table for orders
 CREATE TABLE orders (
     id INT PRIMARY KEY AUTO_INCREMENT,
     customer_id INT NOT NULL,

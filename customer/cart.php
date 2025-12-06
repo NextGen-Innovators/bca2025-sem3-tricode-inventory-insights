@@ -1,21 +1,28 @@
 <?php
-// customer/cart.php
 session_start();
 require_once '../includes/config.php';
+
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 if(!isset($_SESSION['customer_id']) || $_SESSION['role'] !== 'customer') {
     header("Location: ../login.php");
     exit();
 }
 
+$customer_id = $_SESSION['customer_id'];
+$customer_name = $_SESSION['full_name'] ?? 'Customer';
 $cart = $_SESSION['cart'] ?? [];
 $cart_items = [];
 $total_amount = 0;
+$shipping_fee = 50;
 
+// Load cart items
 if(!empty($cart)) {
     $product_ids = array_keys($cart);
     $placeholders = str_repeat('?,', count($product_ids) - 1) . '?';
-    $query = "SELECT p.*, s.shop_name FROM products p 
+    $query = "SELECT p.*, s.shop_name, s.id as store_id FROM products p 
               JOIN stores s ON p.store_id = s.id 
               WHERE p.id IN ($placeholders)";
     
@@ -36,6 +43,88 @@ if(!empty($cart)) {
             'price' => $price,
             'subtotal' => $subtotal
         ];
+    }
+}
+
+// Handle checkout form submission
+if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkout'])) {
+    $shipping_address = trim($_POST['shipping_address']);
+    $payment_method = $_POST['payment_method'] ?? 'cash_on_delivery';
+    $notes = trim($_POST['notes'] ?? '');
+    
+    // Validate
+    $errors = [];
+    
+    if(empty($shipping_address)) {
+        $errors[] = "Please enter delivery address";
+    }
+    
+    if(empty($cart_items)) {
+        $errors[] = "Your cart is empty";
+    }
+    
+    if(empty($errors)) {
+        // Get store_id (assume all items from same store for simplicity)
+        $store_id = $cart_items[0]['product']['store_id'];
+        $final_total = $total_amount + $shipping_fee;
+        
+        // Start transaction
+        $conn->begin_transaction();
+        
+        try {
+            // 1. Create order
+            $order_stmt = $conn->prepare("INSERT INTO orders (customer_id, store_id, total_amount, shipping_address, payment_method, notes) VALUES (?, ?, ?, ?, ?, ?)");
+            $order_stmt->bind_param("iidsss", $customer_id, $store_id, $final_total, $shipping_address, $payment_method, $notes);
+            
+            if(!$order_stmt->execute()) {
+                throw new Exception("Failed to create order: " . $conn->error);
+            }
+            
+            $order_id = $conn->insert_id;
+            
+            // 2. Add order items and update stock
+            foreach($cart_items as $item) {
+                $product = $item['product'];
+                
+                // Check if enough stock
+                if($product['current_stock'] < $item['quantity']) {
+                    throw new Exception("Not enough stock for " . $product['name']);
+                }
+                
+                // Insert order item
+                $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?, ?)");
+                $item_stmt->bind_param("iisidd", $order_id, $product['id'], $product['name'], $item['quantity'], $item['price'], $item['subtotal']);
+                
+                if(!$item_stmt->execute()) {
+                    throw new Exception("Failed to add order item");
+                }
+                
+                // Update stock
+                $update_stmt = $conn->prepare("UPDATE products SET current_stock = current_stock - ? WHERE id = ?");
+                $update_stmt->bind_param("ii", $item['quantity'], $product['id']);
+                $update_stmt->execute();
+            }
+            
+            // 3. Commit transaction
+            $conn->commit();
+            
+            // 4. Clear cart session
+            $_SESSION['cart'] = [];
+            
+            // 5. Store order_id in session for confirmation page
+            $_SESSION['last_order_id'] = $order_id;
+            
+            // 6. Redirect to confirmation page
+            header("Location: order_confirmation.php?order_id=" . $order_id);
+            exit();
+            
+        } catch (Exception $e) {
+            // Rollback on error
+            $conn->rollback();
+            $error = "Order failed: " . $e->getMessage();
+        }
+    } else {
+        $error = implode("<br>", $errors);
     }
 }
 ?>
@@ -156,7 +245,9 @@ if(!empty($cart)) {
                                 <span>Rs. <?php echo number_format($total_amount + 50, 2); ?></span>
                             </div>
                             <button class="btn btn-success w-100 mt-3" onclick="checkout()">
-                                <i class="fas fa-credit-card me-2"></i> Proceed to Checkout
+                                <a href="order_confirmation.php?order_id=TEST123" class="btn btn-success w-100 btn-lg">
+    <i class="fas fa-credit-card me-2"></i> Confirm Order
+</a>
                             </button>
                             <a href="dashboard.php" class="btn btn-outline-secondary w-100 mt-2">
                                 <i class="fas fa-store me-2"></i> Continue Shopping

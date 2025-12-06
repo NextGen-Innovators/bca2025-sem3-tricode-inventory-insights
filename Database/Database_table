@@ -77,3 +77,31 @@ CREATE TABLE customer_orders (
     status ENUM('pending','completed','cancelled') DEFAULT 'pending',
     FOREIGN KEY (customer_id) REFERENCES customers(id)
 );
+CREATE TABLE orders (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL,
+    store_id INT NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    shipping_address TEXT,
+    payment_method ENUM('cash_on_delivery', 'esewa', 'khalti') DEFAULT 'cash_on_delivery',
+    payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending',
+    order_status ENUM('pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled') DEFAULT 'pending',
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    delivery_date DATE,
+    notes TEXT,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+);
+
+-- creating table for order items
+CREATE TABLE order_items (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    product_name VARCHAR(100) NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    total_price DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);

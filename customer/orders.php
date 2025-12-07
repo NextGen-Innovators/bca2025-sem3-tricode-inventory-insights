@@ -22,8 +22,8 @@ if($status_filter != 'all') {
     $params[] = $status_filter;
     $types .= "s";
 }
+$query .= " ORDER BY o.created_at DESC";
 
-$query .= " ORDER BY o.order_date DESC";
 
 $stmt = $conn->prepare($query);
 $stmt->bind_param($types, ...$params);

@@ -118,7 +118,7 @@ $status_color = $status_colors[$order['order_status']] ?? 'secondary';
                         </div>
                         <div class="mb-3">
                             <small class="text-muted">Order Date</small>
-                            <p class="mb-0"><?php echo date('F d, Y h:i A', strtotime($order['order_date'])); ?></p>
+                         <p class="mb-0"><?php echo date('F d, Y h:i A', strtotime($order['created_at'])); ?></p>
                         </div>
                         <div class="mb-3">
                             <small class="text-muted">Payment Method</small>

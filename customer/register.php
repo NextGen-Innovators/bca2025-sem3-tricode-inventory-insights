@@ -515,306 +515,113 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // toogle password visibility
+  <script>
 document.getElementById('togglePassword').addEventListener('click', function(e) {
     e.preventDefault();
     const passwordInput = document.getElementById('password');
     const icon = this.querySelector('i');
-    
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-    } else {
-        passwordInput.type = 'password';
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
-    }
+    passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+    icon.classList.toggle('fa-eye');
+    icon.classList.toggle('fa-eye-slash');
 });
 
 document.getElementById('toggleConfirmPassword').addEventListener('click', function(e) {
     e.preventDefault();
     const confirmInput = document.getElementById('confirm_password');
     const icon = this.querySelector('i');
-    
-    if (confirmInput.type === 'password') {
-        confirmInput.type = 'text';
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-    } else {
-        confirmInput.type = 'password';
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
-    }
+    confirmInput.type = confirmInput.type === 'password' ? 'text' : 'password';
+    icon.classList.toggle('fa-eye');
+    icon.classList.toggle('fa-eye-slash');
 });
-        
-        // Validation functions
-        function validateShopName() {
-            const shopName = document.getElementById('shop_name').value.trim();
-            const errorEl = document.getElementById('shop_name_error');
-            const validEl = document.getElementById('shop_name_valid');
-            
-            if (shopName.length === 0) {
-                errorEl.textContent = 'Shop name is required';
-                errorEl.style.display = 'block';
-                validEl.style.display = 'none';
-                return false;
-            }
-            
-            if (!/^[a-zA-Z\s\-\.\&\',]+$/u.test(shopName)) {
-                errorEl.textContent = 'Only letters, spaces, hyphens, dots, &, \' allowed';
-                errorEl.style.display = 'block';
-                validEl.style.display = 'none';
-                return false;
-            }
-            
-            if (shopName.length < 3) {
-                errorEl.textContent = 'Must be at least 3 characters';
-                errorEl.style.display = 'block';
-                validEl.style.display = 'none';
-                return false;
-            }
-            
-            errorEl.style.display = 'none';
-            validEl.style.display = 'block';
-            return true;
-        }
-        
-        function validateOwnerName() {
-            const ownerName = document.getElementById('owner_name').value.trim();
-            const errorEl = document.getElementById('owner_name_error');
-            const validEl = document.getElementById('owner_name_valid');
-            
-            if (ownerName.length === 0) {
-                errorEl.textContent = 'Owner name is required';
-                errorEl.style.display = 'block';
-                validEl.style.display = 'none';
-                return false;
-            }
-            
-            if (!/^[a-zA-Z\s]+$/u.test(ownerName)) {
-                errorEl.textContent = 'Only letters and spaces allowed';
-                errorEl.style.display = 'block';
-                validEl.style.display = 'none';
-                return false;
-            }
-            
-            if (ownerName.length < 3) {
-                errorEl.textContent = 'Must be at least 3 characters';
-                errorEl.style.display = 'block';
-                validEl.style.display = 'none';
-                return false;
-            }
-            
-            errorEl.style.display = 'none';
-            validEl.style.display = 'block';
-            return true;
-        }
-        
-        function validateEmail() {
-            const email = document.getElementById('email').value.trim();
-            const errorEl = document.getElementById('email_error');
-            const validEl = document.getElementById('email_valid');
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            
-            if (email.length === 0) {
-                errorEl.textContent = 'Email is required';
-                errorEl.style.display = 'block';
-                validEl.style.display = 'none';
-                return false;
-            }
-            
-            if (!emailRegex.test(email)) {
-                errorEl.textContent = 'Please enter a valid email address';
-                errorEl.style.display = 'block';
-                validEl.style.display = 'none';
-                return false;
-            }
-            
-            errorEl.style.display = 'none';
-            validEl.style.display = 'block';
-            return true;
-        }
-        
-        function validatePhone() {
-            const phone = document.getElementById('phone').value.trim();
-            const errorEl = document.getElementById('phone_error');
-            const validEl = document.getElementById('phone_valid');
-            const phoneRegex = /^(97|98)[0-9]{8}$/;
-            
-            if (phone.length === 0) {
-                errorEl.textContent = 'Phone number is required';
-                errorEl.style.display = 'block';
-                validEl.style.display = 'none';
-                return false;
-            }
-            
-            if (!phoneRegex.test(phone)) {
-                errorEl.textContent = 'Must start with 97 or 98 and be 10 digits';
-                errorEl.style.display = 'block';
-                validEl.style.display = 'none';
-                return false;
-            }
-            
-            errorEl.style.display = 'none';
-            validEl.style.display = 'block';
-            return true;
-        }
-        
-        function validatePassword() {
-            const password = document.getElementById('password').value;
-            const strengthFill = document.getElementById('strengthFill');
-            const strengthText = document.getElementById('strengthText');
-            
-            let strength = 0;
-            const rules = {
-                length: password.length >= 8,
-                uppercase: /[A-Z]/.test(password),
-                lowercase: /[a-z]/.test(password),
-                number: /[0-9]/.test(password),
-                special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-            };
-            
-            // Update rule icons
-            Object.keys(rules).forEach(rule => {
-                const icon = document.getElementById(`rule-${rule}-icon`);
-                const ruleEl = document.getElementById(`rule-${rule}`);
-                if (rules[rule]) {
-                    icon.className = 'fas fa-check-circle rule-valid';
-                    ruleEl.classList.add('rule-valid');
-                    ruleEl.classList.remove('rule-invalid');
-                    strength++;
-                } else {
-                    icon.className = 'fas fa-times-circle rule-invalid';
-                    ruleEl.classList.add('rule-invalid');
-                    ruleEl.classList.remove('rule-valid');
-                }
-            });
-            
-            // Update strength meter
-            strengthFill.className = `strength-fill strength-${strength}`;
-            
-            // Update strength text
-            const strengthLabels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
-            const strengthColors = ['text-danger', 'text-danger', 'text-warning', 'text-info', 'text-success'];
-            strengthText.textContent = strengthLabels[strength];
-            strengthText.className = strengthColors[strength];
-            
-            return strength === 5; // All rules must pass
-        }
-        
-        function validateConfirmPassword() {
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirm_password').value;
-            const errorEl = document.getElementById('confirm_password_error');
-            const validEl = document.getElementById('confirm_password_valid');
-            
-            if (confirmPassword.length === 0) {
-                errorEl.textContent = 'Please confirm your password';
-                errorEl.style.display = 'block';
-                validEl.style.display = 'none';
-                return false;
-            }
-            
-            if (password !== confirmPassword) {
-                errorEl.textContent = 'Passwords do not match';
-                errorEl.style.display = 'block';
-                validEl.style.display = 'none';
-                return false;
-            }
-            
-            errorEl.style.display = 'none';
-            validEl.style.display = 'block';
-            return true;
-        }
-        
-        function validateTerms() {
-            const terms = document.getElementById('terms').checked;
-            const errorEl = document.getElementById('terms_error');
-            
-            if (!terms) {
-                errorEl.textContent = 'You must agree to the terms';
-                errorEl.style.display = 'block';
-                return false;
-            }
-            
-            errorEl.style.display = 'none';
-            return true;
-        }
-        
-        // Real-time validation
-        document.getElementById('shop_name').addEventListener('input', validateShopName);
-        document.getElementById('shop_name').addEventListener('blur', validateShopName);
-        
-        document.getElementById('owner_name').addEventListener('input', validateOwnerName);
-        document.getElementById('owner_name').addEventListener('blur', validateOwnerName);
-        
-        document.getElementById('email').addEventListener('input', validateEmail);
-        document.getElementById('email').addEventListener('blur', validateEmail);
-        
-        document.getElementById('phone').addEventListener('input', function(e) {
-            // Auto-format: only numbers, max 10 digits
-            this.value = this.value.replace(/\D/g, '').substring(0, 10);
-            validatePhone();
-        });
-        
-        document.getElementById('phone').addEventListener('blur', validatePhone);
-        
-        document.getElementById('password').addEventListener('input', function() {
-            validatePassword();
-            // Also validate confirm password when password changes
-            if (document.getElementById('confirm_password').value.length > 0) {
-                validateConfirmPassword();
-            }
-        });
-        
-        document.getElementById('confirm_password').addEventListener('input', validateConfirmPassword);
-        
-        document.getElementById('terms').addEventListener('change', validateTerms);
-        
-        // Form submission
-        document.getElementById('registrationForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const validations = [
-                validateShopName(),
-                validateOwnerName(),
-                validateEmail(),
-                validatePhone(),
-                validatePassword(),
-                validateConfirmPassword(),
-                validateTerms()
-            ];
-            
-            const allValid = validations.every(v => v === true);
-            
-            if (allValid) {
-                // Show loading state
-                const submitBtn = document.getElementById('submitBtn');
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Registering...';
-                submitBtn.disabled = true;
-                
-                // Submit form
-                this.submit();
-            } else {
-                // Scroll to first error
-                const firstError = document.querySelector('.error-message[style*="display: block"]');
-                if (firstError) {
-                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }
-        });
-        
-        // Initialize validation on page load for pre-filled values
-        document.addEventListener('DOMContentLoaded', function() {
-            validateShopName();
-            validateOwnerName();
-            validateEmail();
-            validatePhone();
-            validatePassword();
-            validateConfirmPassword();
-        });
-    </script>
+
+function validateEmail() {
+    const email = document.getElementById('email').value.trim();
+    const errorEl = document.getElementById('email_error');
+    const validEl = document.getElementById('email_valid');
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        errorEl.textContent = 'Please enter a valid email';
+        errorEl.style.display = 'block';
+        validEl.style.display = 'none';
+        return false;
+    }
+    errorEl.style.display = 'none';
+    validEl.style.display = 'block';
+    return true;
+}
+
+function validatePhone() {
+    const phone = document.getElementById('phone').value.trim();
+    const errorEl = document.getElementById('phone_error');
+    const validEl = document.getElementById('phone_valid');
+
+    const phoneRegex = /^(97|98)[0-9]{8}$/;
+    if (!phoneRegex.test(phone)) {
+        errorEl.textContent = 'Must start with 97 or 98 (10 digits)';
+        errorEl.style.display = 'block';
+        validEl.style.display = 'none';
+        return false;
+    }
+    errorEl.style.display = 'none';
+    validEl.style.display = 'block';
+    return true;
+}
+
+function validatePassword() {
+    const password = document.getElementById('password').value;
+    const strengthFill = document.getElementById('strengthFill');
+    const strengthText = document.getElementById('strengthText');
+
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
+
+    strengthFill.className = `strength-fill strength-${strength}`;
+    const labels = ['Very Weak','Weak','Fair','Good','Strong'];
+    strengthText.textContent = labels[strength];
+
+    return strength === 5;
+}
+
+function validateConfirmPassword() {
+    const password = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm_password').value;
+    const errorEl = document.getElementById('confirm_password_error');
+    const validEl = document.getElementById('confirm_password_valid');
+
+    if (password !== confirm) {
+        errorEl.textContent = 'Passwords do not match';
+        errorEl.style.display = 'block';
+        validEl.style.display = 'none';
+        return false;
+    }
+    errorEl.style.display = 'none';
+    validEl.style.display = 'block';
+    return true;
+}
+
+function validateTerms() {
+    const checked = document.getElementById('terms').checked;
+    const errorEl = document.getElementById('terms_error');
+    if (!checked) {
+        errorEl.textContent = 'You must agree to terms';
+        errorEl.style.display = 'block';
+        return false;
+    }
+    errorEl.style.display = 'none';
+    return true;
+}
+
+document.getElementById('email').addEventListener('input', validateEmail);
+document.getElementById('phone').addEventListener('input', validatePhone);
+document.getElementById('password').addEventListener('input', validatePassword);
+document.getElementById('confirm_password').addEventListener('input', validateConfirmPassword);
+document.getElementById('terms').addEventListener('change', validateTerms);
+</script>
+
 </body>
 </html>

@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $success = "Registration successful! Redirecting to dashboard...";
             
             // Redirect after 2 seconds
-            header("refresh:2;url=store/dashboard.php");
+            header("refresh:2;url=dashboard.php");
             exit();
         } else {
             $error = "Registration failed. Please try again.";

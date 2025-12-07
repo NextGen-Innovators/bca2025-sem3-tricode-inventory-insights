@@ -42,7 +42,7 @@ $items_stmt = $conn->prepare("SELECT * FROM order_items WHERE order_id = ?");
 $items_stmt->bind_param("i", $order_id);
 $items_stmt->execute();
 $order_items = $items_stmt->get_result();
-
+$shipping_fee = 50;
 // Get customer address for display
 $customer_stmt = $conn->prepare("SELECT address FROM customers WHERE id = ?");
 $customer_stmt->bind_param("i", $customer_id);
@@ -161,7 +161,7 @@ $customer_address = $customer_stmt->get_result()->fetch_assoc()['address'] ?? ''
                                             </tr>
                                             <tr>
                                                 <td colspan="3" class="text-end"><strong>Shipping:</strong></td>
-                                                <td><strong>Rs. <?php echo number_format($shipping_fee, 2); ?></strong></td>
+                                                  <td><strong>Rs. <?php echo number_format($shipping_fee, 2); ?></strong></td>
                                             </tr>
                                             <tr class="table-success">
                                                 <td colspan="3" class="text-end"><strong>Grand Total:</strong></td>
@@ -185,11 +185,12 @@ $customer_address = $customer_stmt->get_result()->fetch_assoc()['address'] ?? ''
                                 <div class="row">
                                     <div class="col-6">
                                         <small class="text-muted">Order Date</small>
-                                        <p class="mb-3"><?php echo date('F d, Y', strtotime($order['order_date'])); ?></p>
+                                      <p>Order Date: <?php echo date('F d, Y, h:i A', strtotime($order['created_at'])); ?></p>
                                     </div>
                                     <div class="col-6">
                                         <small class="text-muted">Order Time</small>
-                                        <p class="mb-3"><?php echo date('h:i A', strtotime($order['order_date'])); ?></p>
+                                       <p class="mb-3"><?php echo date('h:i A', strtotime($order['created_at'])); ?></p>
+
                                     </div>
                                 </div>
                                 <div class="row">

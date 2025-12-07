@@ -39,9 +39,9 @@ $total_products = $conn->query("SELECT COUNT(*) as total FROM products WHERE sto
             <!-- Sidebar -->
             <div class="col-md-2 p-0 sidebar">
                 <div class="p-3">
-                    <h5>🏪 <?php echo $_SESSION['shop_name']; ?></h5>
+                    <h5><?php echo $_SESSION['shop_name']; ?></h5>
                     <hr>
-                    <a href="dashboard.php">📊 Dashboard</a>
+                    <a href="dashboard.php"> Dashboard</a>
                     <a href="products.php">📦 Products</a>
                     <a href="add_product.php">➕ Add Product</a>
                     <a href="alerts.php">⚠️ Alerts</a>
@@ -53,7 +53,7 @@ $total_products = $conn->query("SELECT COUNT(*) as total FROM products WHERE sto
             
             <!-- Main Content -->
             <div class="col-md-10 p-4">
-                <h2>Welcome, <?php echo $_SESSION['owner_name']; ?>! 👋</h2>
+                <h2>Welcome, <?php echo $_SESSION['owner_name']; ?>! </h2>
                 <p class="text-muted">Smart waste reduction dashboard</p>
                 
                 <!-- Stats -->

@@ -132,12 +132,13 @@ $categories = [
             <!-- Sidebar -->
             <div class="col-md-2 p-0 sidebar">
                 <div class="p-3">
-                    <h5>🏪 <?php echo $_SESSION['shop_name']; ?></h5>
+                    <h5><?php echo $_SESSION['shop_name']; ?></h5>
                     <hr>
-                    <a href="dashboard.php">📊 Dashboard</a>
+                    <a href="dashboard.php"> Dashboard</a>
                     <a href="products.php">📦 Products</a>
                     <a href="add_product.php">➕ Add Product</a>
                     <a href="alerts.php">⚠️ Alerts</a>
+                      <a href="get_orders.php">📌Get Order</a>
                     <a href="../logout.php">🚪 Logout</a>
                 </div>
             </div>
@@ -222,7 +223,7 @@ $categories = [
                                     <div class="row mt-3">
                                         <div class="col-md-6">
                                             <button type="submit" class="btn btn-success w-100">
-                                                💾 Update Product
+                                                 Update Product
                                             </button>
                                         </div>
                                         <div class="col-md-6">
@@ -239,7 +240,7 @@ $categories = [
                     <div class="col-md-4">
                         <div class="card">
                             <div class="card-body">
-                                <h5>📊 Product Info</h5>
+                                <h5> Product Info</h5>
                                 <ul class="list-unstyled">
                                     <li><strong>Added:</strong> <?php echo date('M d, Y', strtotime($product['added_date'])); ?></li>
                                     <li><strong>Last Updated:</strong> Now</li>
